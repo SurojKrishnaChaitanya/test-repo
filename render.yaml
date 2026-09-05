@@ -1,0 +1,48 @@
+services:
+  # Native Python Web Service (Primary Render Target)
+  - type: web
+    name: indra-backend
+    env: python
+    rootDir: backend
+    region: oregon
+    plan: standard
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: RENDER_SERVICE_TYPE
+        value: production
+      - key: MODEL_ARCH
+        value: Earthformer-ConvLSTM-DGMR-DualTask
+      - key: INFERENCE_ENGINE
+        value: TensorRT-LLM-Triton-V2.4
+      - key: SPATIAL_RESOLUTION
+        value: 3km_EPSG4326_LCC
+      - key: COMPUTE_NODE
+        value: hf-dgx-a100-mig-3g.40gb
+
+  # Containerized Docker Web Service (Alternative Render Target)
+  - type: web
+    name: indra-backend-docker
+    env: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: standard
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: RENDER_SERVICE_TYPE
+        value: production
+      - key: MODEL_ARCH
+        value: Earthformer-ConvLSTM-DGMR-DualTask
+      - key: INFERENCE_ENGINE
+        value: TensorRT-LLM-Triton-V2.4
+      - key: SPATIAL_RESOLUTION
+        value: 3km_EPSG4326_LCC
+      - key: COMPUTE_NODE
+        value: hf-dgx-a100-mig-3g.40gb

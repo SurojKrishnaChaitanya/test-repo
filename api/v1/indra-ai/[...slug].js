@@ -94,8 +94,8 @@ export default async function handler(req, res) {
       body,
     });
 
-    // Fallback: If 404 and path was /api/v1/alerts..., retry without /api/v1 prefix
-    if (backendRes.status === 404 && subpath.startsWith('alerts')) {
+    // Fallback: If 404 and path was alerts or healthz, retry without /api/v1 prefix
+    if (backendRes.status === 404 && (subpath.startsWith('alerts') || subpath === 'healthz')) {
       const fallbackUrl = `${backendBase}/${subpath}${queryString}`;
       const fallbackRes = await fetch(fallbackUrl, {
         method: req.method,

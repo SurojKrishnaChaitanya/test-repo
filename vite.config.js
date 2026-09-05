@@ -21,6 +21,9 @@ const STRIP_HEADERS = [
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    sourcemap: false, // Disables source maps for production builds
+  },
   plugins: [
     react(),
     tailwindcss()

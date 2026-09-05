@@ -299,17 +299,31 @@ if not _FASTAPI_AVAILABLE:
                         handler = f
                         break
 
-                if handler is None:
-                    response = JSONResponse({"detail": "Not Found"}, status_code=404)
-                else:
+                req = Request(scope, receive)
+                async def base_call_next(request):
+                    nonlocal handler
+                    if handler is None:
+                        return JSONResponse({"detail": "Not Found"}, status_code=404)
                     if inspect.iscoroutinefunction(handler):
                         res = await handler()
                     else:
                         res = handler()
                     if isinstance(res, Response):
-                        response = res
-                    else:
-                        response = JSONResponse(res)
+                        return res
+                    return JSONResponse(res)
+
+                call_next = base_call_next
+                for mw_cls, kw in reversed(self.middlewares):
+                    if hasattr(mw_cls, "dispatch"):
+                        mw_inst = mw_cls(self)
+                        curr_call = call_next
+                        def make_step(m, nxt):
+                            async def step(r):
+                                return await m.dispatch(r, nxt)
+                            return step
+                        call_next = make_step(mw_inst, curr_call)
+
+                response = await call_next(req)
 
                 headers_raw = [(k.encode("latin1"), v.encode("latin1")) for k, v in response.headers.items()]
                 await send({

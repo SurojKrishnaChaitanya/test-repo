@@ -128,7 +128,23 @@ async def root_advisory_alias(payload: advisory.AdvisoryGenerationRequest):
     return await advisory.generate_multilingual_advisory(payload)
 
 
+@app.get("/", tags=["Root"])
+@app.get(f"{getattr(settings, 'API_V1_STR', '/api/v1')}", tags=["Root"])
+async def root():
+    """Operational root endpoint for health checks and API status discovery."""
+    return {
+        "service": getattr(settings, "PROJECT_NAME", "INDRA-AI High-Resolution Severe Weather Nowcasting Engine"),
+        "version": getattr(settings, "VERSION", "2.4.0"),
+        "status": "operational",
+        "docs_url": "/docs",
+        "healthz": "/healthz",
+        "model_architecture": getattr(settings, "MODEL_ARCHITECTURE", "Earthformer-ConvLSTM-DGMR-DualTask"),
+        "inference_engine": getattr(settings, "INFERENCE_ENGINE", "TensorRT-LLM-Triton-V2.4"),
+    }
+
+
 @app.get("/healthz", tags=["Health Probe"])
+@app.get(f"{getattr(settings, 'API_V1_STR', '/api/v1')}/healthz", tags=["Health Probe"])
 async def health_check_probe():
     """Operational health check probe for Render orchestration and load balancers."""
     return {
