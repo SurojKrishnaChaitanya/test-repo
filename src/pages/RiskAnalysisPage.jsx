@@ -13,6 +13,25 @@ import {
   LabelList
 } from 'recharts';
 
+const CustomTooltip = ({ active, payload, label, themeHex }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-200 text-xs space-y-1">
+        <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+          Forecast {label}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: themeHex }} />
+          <span className="font-black text-slate-900 text-sm">
+            {payload[0].value} <span className="text-slate-500 font-medium text-xs">mm/h Precip</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const RiskAnalysisPage = () => {
   const activeTarget = useWeatherStore((state) => state.selectedRegion || state.activeTargetRegion || state.selectedCell);
   const currentRiskData = useWeatherStore((state) => state.currentRiskData);
@@ -69,24 +88,7 @@ export const RiskAnalysisPage = () => {
   });
 
   // Precipitation Tooltip for Recharts
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-200 text-xs space-y-1">
-          <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-            Forecast {label}
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: theme.hex }} />
-            <span className="font-black text-slate-900 text-sm">
-              {payload[0].value} <span className="text-slate-500 font-medium text-xs">mm/h Precip</span>
-            </span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 h-full overflow-y-auto">
@@ -203,7 +205,7 @@ export const RiskAnalysisPage = () => {
                   tickLine={false}
                   axisLine={false}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip themeHex={theme.hex} />} />
                 <Area
                   type="monotone"
                   dataKey="precipitation"

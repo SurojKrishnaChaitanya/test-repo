@@ -26,23 +26,15 @@ export const XAIReportsPage = () => {
     if (activeTargetRegion) fetchRiskAnalysis();
   }, [activeTargetRegion?.id, fetchRiskAnalysis]);
 
-  if (!activeTargetRegion) {
-    return (
-      <div className="p-6 text-sm text-slate-400">
-        Select a region to view Explainable AI (XAI) diagnostics.
-      </div>
-    );
-  }
-
   // Live telemetry resolution for selected region
   const regionTelemetry = (activeTargetRegion && telemetryData[activeTargetRegion.id]?.current) || {};
 
-  const iwvVal = regionTelemetry.iwv ?? (currentRiskData?.metrics?.iwvMoisture ? parseFloat(currentRiskData.metrics.iwvMoisture) : activeTargetRegion.baselineParams?.iwv ?? 52);
-  const capeVal = regionTelemetry.cape ?? (currentRiskData?.metrics?.cape ? parseFloat(currentRiskData.metrics.cape) : activeTargetRegion.baselineParams?.cape ?? 2400);
-  const cinVal = regionTelemetry.cin ?? (currentRiskData?.metrics?.cin ? parseFloat(currentRiskData.metrics.cin) : activeTargetRegion.baselineParams?.cin ?? -12);
-  const cttDropVal = regionTelemetry.cttDrop30m ?? (currentRiskData?.metrics?.cttDropRate ? Math.abs(parseFloat(currentRiskData.metrics.cttDropRate)) : activeTargetRegion.baselineParams?.cttDrop ?? 8);
-  const precipVal = regionTelemetry.rainfallRate ?? (currentRiskData?.metrics?.precipitationRate ? parseFloat(currentRiskData.metrics.precipitationRate) : activeTargetRegion.baselineParams?.precipitation ?? 65);
-  const slopeVal = activeTargetRegion.baselineParams?.slope ?? 16;
+  const iwvVal = regionTelemetry.iwv ?? (currentRiskData?.metrics?.iwvMoisture ? parseFloat(currentRiskData.metrics.iwvMoisture) : activeTargetRegion?.baselineParams?.iwv ?? 52);
+  const capeVal = regionTelemetry.cape ?? (currentRiskData?.metrics?.cape ? parseFloat(currentRiskData.metrics.cape) : activeTargetRegion?.baselineParams?.cape ?? 2400);
+  const cinVal = regionTelemetry.cin ?? (currentRiskData?.metrics?.cin ? parseFloat(currentRiskData.metrics.cin) : activeTargetRegion?.baselineParams?.cin ?? -12);
+  const cttDropVal = regionTelemetry.cttDrop30m ?? (currentRiskData?.metrics?.cttDropRate ? Math.abs(parseFloat(currentRiskData.metrics.cttDropRate)) : activeTargetRegion?.baselineParams?.cttDrop ?? 8);
+  const precipVal = regionTelemetry.rainfallRate ?? (currentRiskData?.metrics?.precipitationRate ? parseFloat(currentRiskData.metrics.precipitationRate) : activeTargetRegion?.baselineParams?.precipitation ?? 65);
+  const slopeVal = activeTargetRegion?.baselineParams?.slope ?? 16;
 
   // Dynamically compute physics-grounded feature attributions summing to 100%
   const xaiResult = useMemo(() => {
@@ -55,6 +47,14 @@ export const XAIReportsPage = () => {
       precipitation: precipVal,
     });
   }, [iwvVal, capeVal, cinVal, slopeVal, cttDropVal, precipVal]);
+
+  if (!activeTargetRegion) {
+    return (
+      <div className="p-6 text-sm text-slate-400">
+        Select a region to view Explainable AI (XAI) diagnostics.
+      </div>
+    );
+  }
 
   const attrIwv = xaiResult.attributions.find((a) => a.id === 'iwv') || { percentage: 34 };
   const attrBuoyancy = xaiResult.attributions.find((a) => a.id === 'buoyancy') || { percentage: 28 };
