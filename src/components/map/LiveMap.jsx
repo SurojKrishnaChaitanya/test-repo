@@ -119,7 +119,7 @@ export const LiveMap = ({ riskData, isConnected }) => {
           <span className="text-slate-300 font-mono">Center: 28.6139° N, 77.2090° E</span>
         </div>
         <div className="text-[10px] text-slate-400">
-          Spatial Resolution: 3km x 3km Grid · ERA5 Reanalysis + INSAT-3D/3DR WV/TIR + CartoDEM
+          Spatial Resolution: 3km x 3km Grid · IMDAA Reanalysis + INSAT-3D/3DR WV/TIR + CartoDEM
         </div>
       </div>
 

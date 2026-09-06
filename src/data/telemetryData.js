@@ -1,9 +1,9 @@
 // Per-region atmospheric readings, region metadata, and multi-hazard time series (+2h to +6h)
-// Data Sources: ERA5 Reanalysis (IWV, CAPE, CIN) + INSAT-3D/3DR (CTT Drop) + CartoDEM at 3x3 km grid resolution
+// Data Sources: IMDAA Reanalysis (IWV, CAPE, CIN) + INSAT-3D/3DR (CTT Drop) + CartoDEM at 3x3 km grid resolution
 export const telemetryDataSourceMeta = {
   spatialResolution: '3km x 3km',
   crs: 'EPSG:4326_LCC',
-  reanalysis: 'ERA5',
+  reanalysis: 'IMDAA',
   satellite: 'INSAT-3D/3DR WV/TIR',
   elevation: 'CartoDEM',
 };

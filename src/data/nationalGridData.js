@@ -1,10 +1,10 @@
 import { alertsData } from './alertsData.js';
 
 // Atmospheric National Grid — 3x3 km Spatial Resolution (EPSG:4326 / LCC)
-// Synthesizing ERA5 reanalysis moisture flux, INSAT-3D/3DR CTT drop rate,
+// Synthesizing IMDAA reanalysis moisture flux, INSAT-3D/3DR CTT drop rate,
 // and CartoDEM topographic slope indices.
-const INDIA_BOUNDS = { latMin: 6, latMax: 38, lngMin: 68, lngMax: 98 };
-const GRID_RESOLUTION_DEG = 0.5; // Aggregated cell centroids for national Deck.gl/MapLibre layer
+const INDIA_BOUNDS = { latMin: 8.0, latMax: 35.5, lngMin: 68.0, lngMax: 96.0 };
+const GRID_RESOLUTION_DEG = 0.2; // Dense pan-India meteorological mesh
 
 // Deterministic pseudo-noise (keeps output stable across reloads)
 function seededNoise(lat, lng) {
@@ -70,7 +70,7 @@ function computeHazardGrid(hazardType) {
   });
 }
 
-// Eagerly computed once at module load — cheap (~960 points x 3 hazards)
+// Eagerly computed once at module load — dense mesh (~19,000 points x 3 hazards)
 export const nationalHazardGrids = {
   thunderstorm: computeHazardGrid('thunderstorm'),
   cloudburst: computeHazardGrid('cloudburst'),
@@ -102,7 +102,7 @@ export const gridMeta = {
   resolutionDeg: GRID_RESOLUTION_DEG,
   spatialResolution: '3km x 3km',
   crs: 'EPSG:4326_LCC',
-  dataSource: 'ERA5 Reanalysis + INSAT-3D/3DR + CartoDEM',
+  dataSource: 'IMDAA Reanalysis + INSAT-3D/3DR + CartoDEM',
   cols: Math.floor((INDIA_BOUNDS.lngMax - INDIA_BOUNDS.lngMin) / GRID_RESOLUTION_DEG) + 1,
   rows: Math.floor((INDIA_BOUNDS.latMax - INDIA_BOUNDS.latMin) / GRID_RESOLUTION_DEG) + 1,
 };
@@ -115,46 +115,35 @@ export function getFlatValues(hazardType) {
 }
 
 export const PAN_INDIA_REGIONAL_NODES = [
-  // Western Coast & Western Ghats (Konkan / Sahyadri)
-  { lng: 72.8777, lat: 19.0760, val: 94, name: 'Mumbai Metro', state: 'Maharashtra' },
-  { lng: 73.1000, lat: 19.2000, val: 92, name: 'Thane / Kalyan', state: 'Maharashtra' },
-  { lng: 73.6600, lat: 17.9300, val: 96, name: 'Mahabaleshwar / Western Ghats', state: 'Maharashtra' },
-  { lng: 73.8567, lat: 18.5204, val: 78, name: 'Pune Outskirts', state: 'Maharashtra' },
-  { lng: 73.8180, lat: 15.2993, val: 84, name: 'Goa Coastal', state: 'Goa' },
-  { lng: 74.8560, lat: 12.9141, val: 80, name: 'Mangaluru Coast', state: 'Karnataka' },
+  // Arid & Rain-Shadow Zones (Near-Zero / Low Rain, 0-15 mm/hr)
+  { lng: 73.0243, lat: 26.2389, val: 5, name: 'Jodhpur', state: 'Rajasthan' },
+  { lng: 70.9083, lat: 26.9157, val: 2, name: 'Jaisalmer', state: 'Rajasthan' },
+  { lng: 73.3000, lat: 28.0229, val: 8, name: 'Bikaner', state: 'Rajasthan' },
+  { lng: 71.3967, lat: 25.7521, val: 4, name: 'Barmer', state: 'Rajasthan' },
+  { lng: 69.8597, lat: 23.7337, val: 6, name: 'Kutch / Bhuj', state: 'Gujarat' },
+  { lng: 77.5946, lat: 14.6819, val: 12, name: 'Rayalaseema / Anantapur', state: 'Andhra Pradesh' },
+  { lng: 75.1240, lat: 15.3647, val: 14, name: 'North Karnataka / Hubli', state: 'Karnataka' },
+  { lng: 73.8567, lat: 18.5204, val: 15, name: 'Pune Rain Shadow', state: 'Maharashtra' },
+
+  // Moderate Monsoon Zones (25-50 mm/hr)
+  { lng: 77.4126, lat: 23.2599, val: 35, name: 'Bhopal / Central MP', state: 'Madhya Pradesh' },
+  { lng: 79.0882, lat: 21.1458, val: 42, name: 'Nagpur / Vidarbha', state: 'Maharashtra' },
+  { lng: 85.1376, lat: 25.5941, val: 38, name: 'Patna / Gangetic Plains', state: 'Bihar' },
+  { lng: 85.8245, lat: 20.2961, val: 45, name: 'Bhubaneswar Coastal', state: 'Odisha' },
+  { lng: 88.3639, lat: 22.5726, val: 48, name: 'Kolkata Delta', state: 'West Bengal' },
+  { lng: 80.9462, lat: 26.8467, val: 32, name: 'Lucknow / UP', state: 'Uttar Pradesh' },
   
-  // Southern Peninsula & Kerala Western Ghats
-  { lng: 76.2711, lat: 9.9312, val: 93, name: 'Kochi / Central Kerala', state: 'Kerala' },
-  { lng: 76.1300, lat: 11.6800, val: 95, name: 'Wayanad Catchment', state: 'Kerala' },
-  { lng: 76.9558, lat: 8.5241, val: 75, name: 'Thiruvananthapuram', state: 'Kerala' },
-  { lng: 77.5946, lat: 12.9716, val: 76, name: 'Bengaluru Urban', state: 'Karnataka' },
-  { lng: 80.2707, lat: 13.0827, val: 72, name: 'Chennai Metro', state: 'Tamil Nadu' },
-  { lng: 78.4867, lat: 17.3850, val: 68, name: 'Hyderabad Deccan', state: 'Telangana' },
-  
-  // Northern Plains, NCR & Western Himalayas
-  { lng: 77.1025, lat: 28.7041, val: 85, name: 'Delhi NCR', state: 'Delhi' },
-  { lng: 76.9500, lat: 28.6000, val: 80, name: 'Gurugram', state: 'Haryana' },
-  { lng: 77.1734, lat: 31.1048, val: 88, name: 'Shimla Ridge', state: 'Himachal Pradesh' },
-  { lng: 77.0999, lat: 30.9070, val: 90, name: 'Solan / Giri Basin', state: 'Himachal Pradesh' },
+  // Active Severe Hotspots (75-110+ mm/hr)
+  { lng: 72.8777, lat: 19.0760, val: 95, name: 'Mumbai Metro', state: 'Maharashtra' },
+  { lng: 73.1000, lat: 19.2000, val: 98, name: 'Thane / Kalyan', state: 'Maharashtra' },
+  { lng: 73.3000, lat: 16.9902, val: 105, name: 'Ratnagiri Coast', state: 'Maharashtra' },
+  { lng: 73.6600, lat: 17.9300, val: 110, name: 'Mahabaleshwar / Escarpment', state: 'Maharashtra' },
+  { lng: 77.1734, lat: 31.1048, val: 85, name: 'Shimla Ridge', state: 'Himachal Pradesh' },
+  { lng: 77.0999, lat: 30.9070, val: 88, name: 'Solan / Giri Basin', state: 'Himachal Pradesh' },
+  { lng: 78.9814, lat: 30.2849, val: 92, name: 'Rudraprayag / Kedarnath', state: 'Uttarakhand' },
   { lng: 78.0322, lat: 30.3165, val: 84, name: 'Dehradun Valley', state: 'Uttarakhand' },
-  { lng: 78.9814, lat: 30.2849, val: 91, name: 'Rudraprayag / Kedarnath', state: 'Uttarakhand' },
-  { lng: 74.8570, lat: 32.7266, val: 70, name: 'Jammu Foothills', state: 'Jammu & Kashmir' },
-  
-  // Eastern Region, Gangetic Delta & Northeast
-  { lng: 88.3639, lat: 22.5726, val: 88, name: 'Kolkata Metro', state: 'West Bengal' },
-  { lng: 88.2663, lat: 27.0410, val: 86, name: 'Darjeeling Hills', state: 'West Bengal' },
-  { lng: 91.7362, lat: 26.1445, val: 98, name: 'Guwahati / Brahmaputra', state: 'Assam' },
+  { lng: 91.7362, lat: 26.1445, val: 96, name: 'Guwahati / Brahmaputra', state: 'Assam' },
+  { lng: 91.5822, lat: 25.2975, val: 115, name: 'Mawsynram / Meghalaya Trough', state: 'Meghalaya' },
   { lng: 92.7789, lat: 24.8333, val: 82, name: 'Silchar Valley', state: 'Assam' },
-  { lng: 93.9368, lat: 24.8170, val: 79, name: 'Imphal Valley', state: 'Manipur' },
-  { lng: 85.8245, lat: 20.2961, val: 78, name: 'Bhubaneswar Coastal', state: 'Odisha' },
-  { lng: 85.1376, lat: 25.5941, val: 72, name: 'Patna Gangetic', state: 'Bihar' },
-  
-  // Central India & Western Plains
-  { lng: 72.5714, lat: 23.0225, val: 68, name: 'Ahmedabad', state: 'Gujarat' },
-  { lng: 72.8311, lat: 21.1702, val: 76, name: 'Surat Coast', state: 'Gujarat' },
-  { lng: 79.0882, lat: 21.1458, val: 66, name: 'Nagpur Central', state: 'Maharashtra' },
-  { lng: 77.4126, lat: 23.2599, val: 62, name: 'Bhopal Plateau', state: 'Madhya Pradesh' },
-  { lng: 83.2185, lat: 17.6868, val: 74, name: 'Visakhapatnam Coast', state: 'Andhra Pradesh' },
-  { lng: 75.8577, lat: 22.7196, val: 64, name: 'Indore Malwa', state: 'Madhya Pradesh' },
-  { lng: 75.7873, lat: 26.9124, val: 60, name: 'Jaipur', state: 'Rajasthan' },
+  { lng: 76.1300, lat: 11.6800, val: 90, name: 'Wayanad Catchment', state: 'Kerala' },
 ];

@@ -2,7 +2,7 @@
  * Physics-grounded Explainable AI (XAI) Attribution & Sensitivity Kernel
  * Models Integrated Gradients / SHAP proxy attribution across the 4 key convective catalysts:
  * 1. Moisture Flux & IWV Anomaly (IMDAA / INSAT-3D WV)
- * 2. Thermal Buoyancy & CAPE/CIN Erosion (IMDAA ERA5 Reanalysis)
+ * 2. Thermal Buoyancy & CAPE/CIN Erosion (IMDAA Reanalysis)
  * 3. Orographic & Geomorphic Gain (CartoDEM 30m)
  * 4. Convective Updraft Dynamics (INSAT-3D/3DR TIR Cooling Rate)
  */
@@ -156,7 +156,7 @@ export function generateXAINarrative(dominant, params) {
       return `Marine boundary layer moisture convergence (IMDAA) is the primary convective driver, accounting for ${dominant.percentage}% of the cloudburst signal with deep tropospheric column saturation (${iwv} kg/m²). INSAT-3D/3DR water vapor channel tracking confirms sustained southwesterly monsoonal surge, while CartoDEM topographic slope (${slope}°) channels precipitation into saturated drainage basins.`;
 
     case 'buoyancy':
-      return `Intense boundary layer thermodynamic instability (IMDAA ERA5 CAPE: ${cape} J/kg) with an eroding convective inhibition barrier (${cin} J/kg CIN) is the dominant driver, accounting for ${dominant.percentage}% of convective updraft initiation. Uncapped thermal buoyancy accelerates explosive parcel ascent, verified by INSAT-3D/3DR infrared thermal cooling gradients and localized by CartoDEM valley contours.`;
+      return `Intense boundary layer thermodynamic instability (IMDAA CAPE: ${cape} J/kg) with an eroding convective inhibition barrier (${cin} J/kg CIN) is the dominant driver, accounting for ${dominant.percentage}% of convective updraft initiation. Uncapped thermal buoyancy accelerates explosive parcel ascent, verified by INSAT-3D/3DR infrared thermal cooling gradients and localized by CartoDEM valley contours.`;
 
     case 'slope':
       return `Steep CartoDEM orographic convergence (${slope}° slope gradient) accelerates runoff translation and geomorphic hydrograph channeling, accounting for ${dominant.percentage}% of the localized flash-flood signal. Steep terrain induces rapid hydrological concentration into mountain riverbeds, converting incoming IMDAA moisture flux into immediate inundation hazard ahead of INSAT-3D cloud dissipation.`;
