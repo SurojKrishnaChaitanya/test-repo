@@ -220,7 +220,7 @@ export default function SystemVitalsWidget({ isOpen, onClose }) {
             </div>
             <span className="text-slate-600">•</span>
             <div className="text-slate-300">
-              <span>ERA5 Lag: <strong>{ingestion.era5_reanalysis_assimilation_lag_min}m</strong></span>
+              <span>IMDAA Lag: <strong>{ingestion.era5_reanalysis_assimilation_lag_min}m</strong></span>
             </div>
             <span className="text-slate-600">•</span>
             <div className="text-slate-300">

@@ -39,9 +39,6 @@ export const CellTelemetryDrawer = ({ cellData, isLoading, onClose }) => {
     64
   );
 
-  const iwv = cellData?.thermodynamics?.iwv || cellData?.iwv || '47 kg/m²';
-  const cape = cellData?.thermodynamics?.cape || cellData?.cape || '1920 J/kg';
-  const cin = cellData?.thermodynamics?.cin || cellData?.cin || '-10 J/kg';
 
   return (
     <div className="fixed top-16 right-4 z-40 w-72 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-3.5 text-slate-800 space-y-2.5 animate-in slide-in-from-right-3 duration-150">
@@ -135,23 +132,7 @@ export const CellTelemetryDrawer = ({ cellData, isLoading, onClose }) => {
             </div>
           </div>
 
-          {/* Thermodynamics Tiles */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-[9px] text-slate-400 block font-medium">IWV Moisture</span>
-              <span className="font-bold text-slate-800 text-xs font-mono">
-                {iwv}
-              </span>
-              <span className="text-[8px] text-rose-600 font-semibold block mt-0.5">+47% Anomaly</span>
-            </div>
-            <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-[9px] text-slate-400 block font-medium">CAPE / CIN</span>
-              <span className="font-bold text-slate-800 text-xs font-mono">
-                {cape}
-              </span>
-              <span className="text-[8px] text-slate-500 block mt-0.5">CIN: {cin}</span>
-            </div>
-          </div>
+
 
           {/* Actions */}
           <div className="flex items-center gap-1.5 pt-1">

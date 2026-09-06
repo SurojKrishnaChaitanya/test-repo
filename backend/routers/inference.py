@@ -115,4 +115,26 @@ async def execute_model_inference(request: PredictRequest):
         telemetry=request.telemetry,
         forecast_horizon_hours=request.leadTimeHours or 2.0
     )
-    return result
+    tel = result.get("telemetry_observed", {})
+    return {
+        **result,
+        "regionId": result.get("region_id"),
+        "regionName": result.get("region_name"),
+        "riskScore": result.get("risk_score"),
+        "hazardType": result.get("hazard_type"),
+        "confidence": result.get("model_confidence"),
+        "modelConfidence": result.get("model_confidence"),
+        "hourlyTrend": result.get("hourly_trend"),
+        "featureImportance": result.get("feature_importance"),
+        "attentionGrid": result.get("attention_grid"),
+        "metrics": {
+            "precipitationRate": tel.get("precipitation_rate", "65 mm/h"),
+            "precipitationDaily": tel.get("precipitation_daily", "156 mm/day (IMD scale)"),
+            "windSpeed": tel.get("wind_speed", "40 km/h"),
+            "iwvMoisture": tel.get("integrated_water_vapor", "45 kg/m²"),
+            "cape": tel.get("cape", "1800 J/kg"),
+            "cin": tel.get("cin", "-15 J/kg"),
+            "cttDropRate": tel.get("ctt_drop_rate", "-8°C/30min"),
+        },
+        "xaiExplanation": result.get("xai_explanation"),
+    }

@@ -13,35 +13,60 @@ import {
   LabelList
 } from 'recharts';
 
+const CustomTooltip = ({ active, payload, label, themeHex }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-200 text-xs space-y-1">
+        <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+          Forecast {label}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: themeHex }} />
+          <span className="font-black text-slate-900 text-sm">
+            {payload[0].value} <span className="text-slate-500 font-medium text-xs">mm/h Precip</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const RiskAnalysisPage = () => {
-  const selectedRegion = useWeatherStore((state) => state.selectedRegion);
+  const activeTarget = useWeatherStore((state) => state.selectedRegion || state.activeTargetRegion || state.selectedCell);
   const currentRiskData = useWeatherStore((state) => state.currentRiskData);
   const isLoading = useWeatherStore((state) => state.isLoading);
   const fetchRiskAnalysis = useWeatherStore((state) => state.fetchRiskAnalysis);
 
   useEffect(() => {
-    if (selectedRegion) fetchRiskAnalysis();
-  }, [selectedRegion?.id, fetchRiskAnalysis]);
+    if (activeTarget) fetchRiskAnalysis();
+  }, [activeTarget?.id, fetchRiskAnalysis]);
 
-  if (!selectedRegion) {
+  if (!activeTarget) {
     return <div className="p-6 text-sm text-slate-500 bg-slate-50 min-h-screen">Select a region to view risk analysis.</div>;
   }
 
   const riskData = currentRiskData || { 
-    riskScore: selectedRegion.riskScore, 
-    hazardType: selectedRegion.hazardType, 
+    riskScore: activeTarget.riskScore || activeTarget.baselineHazard === 'flashFlood' ? 80 : 30, 
+    hazardType: activeTarget.hazardType || activeTarget.baselineHazard, 
     confidence: 0.85 
   };
-  const hourlyTrend = riskData.hourlyTrend || [];
-  const featureImportance = riskData.featureImportance || [];
-  const metrics = riskData.metrics || {};
+  const hourlyTrend = riskData.hourlyTrend || riskData.hourly_trend || [];
+  const metrics = riskData.metrics || riskData.telemetry_observed || {};
+  const effectiveRiskScore = Number(riskData.riskScore ?? riskData.risk_score ?? activeTarget.riskScore ?? 75);
 
   // Extract or calculate numeric precipitation rate (mm/h)
-  const currentPrecip = Number(
-    metrics.precipitationRate?.replace(/[^0-9.]/g, '') ||
-    selectedRegion.precipitation ||
-    Math.round((riskData.riskScore / 100) * 85 + 10)
-  );
+  const rawPrecipStr = metrics.precipitationRate || metrics.precipitation_rate || '';
+  const parsedPrecip = typeof rawPrecipStr === 'string' ? parseFloat(rawPrecipStr.replace(/[^0-9.]/g, '')) : Number(rawPrecipStr);
+  const currentPrecip = !isNaN(parsedPrecip) && parsedPrecip > 0
+    ? Math.round(parsedPrecip)
+    : activeTarget.baselineParams?.precipitation || Math.round((effectiveRiskScore / 100) * 85 + 10);
+
+  const rawFeatureImportance = riskData.featureImportance || riskData.feature_importance || [];
+  const featureImportance = rawFeatureImportance.map(f => ({
+    ...f,
+    impact: currentPrecip < 15 ? Math.round(f.impact * 0.2) : f.impact
+  }));
 
   // Precipitation theme styling
   const getPrecipTheme = (rate) => {
@@ -54,7 +79,8 @@ export const RiskAnalysisPage = () => {
 
   // Map hourly trend from risk scale to physical precipitation (mm/h)
   const chartData = hourlyTrend.map((pt) => {
-    const mmPerHour = Math.round((pt.risk / 100) * 95 + 5);
+    const maxVal = Math.max(10, currentPrecip * 1.5);
+    const mmPerHour = Math.round((pt.risk / 100) * maxVal);
     return {
       time: `+${pt.hour}h`,
       precipitation: mmPerHour,
@@ -62,24 +88,7 @@ export const RiskAnalysisPage = () => {
   });
 
   // Precipitation Tooltip for Recharts
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-slate-200 text-xs space-y-1">
-          <p className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-            Forecast {label}
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: theme.hex }} />
-            <span className="font-black text-slate-900 text-sm">
-              {payload[0].value} <span className="text-slate-500 font-medium text-xs">mm/h Precip</span>
-            </span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 h-full overflow-y-auto">
@@ -90,9 +99,9 @@ export const RiskAnalysisPage = () => {
             <span className="text-xs font-bold text-sky-600 uppercase tracking-wider">XAI Nowcasting Engine</span>
             {isLoading && <span className="text-xs text-amber-600 font-semibold animate-pulse">• Running ML Inference...</span>}
           </div>
-          <h1 className="text-2xl font-black text-slate-900">{selectedRegion.name} — Convective Nowcast</h1>
+          <h1 className="text-2xl font-black text-slate-900">{activeTarget?.name || 'National Composite'} — Convective Nowcast</h1>
           <p className="text-xs text-slate-500">
-            {selectedRegion.state} • +1h to +6h Window • Model Confidence: {((riskData.confidence ?? 0.85) * 100).toFixed(1)}%
+            {activeTarget?.state || 'Pan-India'} • +1h to +6h Window • Model Confidence: {((riskData.confidence ?? riskData.model_confidence ?? 0.85) * 100).toFixed(1)}%
           </p>
         </div>
         <span className={`px-3.5 py-1.5 rounded-xl text-xs font-bold text-white ${theme.badge} shadow-sm uppercase`}>
@@ -125,8 +134,10 @@ export const RiskAnalysisPage = () => {
             <CloudRain className="w-5 h-5 text-sky-500" />
           </div>
           <div className="mt-4">
-            <span className="text-xl font-black text-slate-900 capitalize">{riskData.hazardType}</span>
-            <p className="text-[11px] text-slate-500 mt-1">Intensity: <strong className="text-slate-700">{metrics.precipitationRate ?? `${currentPrecip} mm/h`}</strong></p>
+            <span className="text-xl font-black text-slate-900 capitalize">
+              {currentPrecip < 15 ? 'Low Convective Risk' : (riskData.hazardType || riskData.hazard_type || 'Thunderstorm').replace(/([A-Z])/g, ' $1').trim()}
+            </span>
+            <p className="text-[11px] text-slate-500 mt-1">Intensity: <strong className="text-slate-700">{currentPrecip < 15 ? 'Stable' : (metrics.precipitationRate || metrics.precipitation_rate || `${currentPrecip} mm/h`)}</strong></p>
           </div>
         </div>
 
@@ -136,8 +147,8 @@ export const RiskAnalysisPage = () => {
             <Activity className="w-5 h-5 text-amber-500" />
           </div>
           <div className="mt-4">
-            <span className="text-xl font-black text-slate-900 font-mono">{metrics.iwvMoisture ?? '40 kg/m²'}</span>
-            <p className="text-[11px] text-slate-500 mt-1">CAPE: <strong className="text-slate-700">{metrics.cape ?? '1754 J/kg'}</strong></p>
+            <span className="text-xl font-black text-slate-900 font-mono">{metrics.iwvMoisture || activeTarget?.baselineParams?.iwv || 40} kg/m²</span>
+            <p className="text-[11px] text-slate-500 mt-1">CAPE: <strong className="text-slate-700">{metrics.cape || activeTarget?.baselineParams?.cape || 1500} J/kg</strong></p>
           </div>
         </div>
 
@@ -147,8 +158,8 @@ export const RiskAnalysisPage = () => {
             <Wind className="w-5 h-5 text-teal-500" />
           </div>
           <div className="mt-4">
-            <span className="text-xl font-black text-slate-900 font-mono">{metrics.windSpeed ?? '34 km/h'}</span>
-            <p className="text-[11px] text-slate-500 mt-1">CTT Drop: <strong className="text-slate-700">{metrics.cttDropRate ?? '-9°C/30min'}</strong></p>
+            <span className="text-xl font-black text-slate-900 font-mono">{metrics.windSpeed || metrics.wind_speed || '34 km/h'}</span>
+            <p className="text-[11px] text-slate-500 mt-1">CTT Drop: <strong className="text-slate-700">{metrics.cttDropRate || metrics.ctt_drop_rate || '-9°C/30min'}</strong></p>
           </div>
         </div>
       </div>
@@ -194,7 +205,7 @@ export const RiskAnalysisPage = () => {
                   tickLine={false}
                   axisLine={false}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip themeHex={theme.hex} />} />
                 <Area
                   type="monotone"
                   dataKey="precipitation"

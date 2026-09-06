@@ -7,10 +7,9 @@ import RiskComparisionCanvas from '../components/Simulator/RiskComparisionCanvas
 import SimulatorChat from '../components/Simulator/SimulatorChat';
 
 export const SimulatorPage = () => {
-  const selectedRegion = useWeatherStore((state) => state.selectedRegion);
+  const activeTargetRegion = useWeatherStore((state) => state.activeTargetRegion);
   const currentRiskData = useWeatherStore((state) => state.currentRiskData);
   const isLoading = useWeatherStore((state) => state.isLoading);
-  const syncSimulatorToRegionTelemetry = useWeatherStore((state) => state.syncSimulatorToRegionTelemetry);
   const resetSimulatorParameters = useWeatherStore((state) => state.resetSimulatorParameters);
   const setStreamPaused = useWeatherStore((state) => state.setStreamPaused);
 
@@ -20,15 +19,15 @@ export const SimulatorPage = () => {
   }, [setStreamPaused]);
 
   useEffect(() => {
-    if (selectedRegion && telemetryData[selectedRegion.id]?.current) {
-      syncSimulatorToRegionTelemetry(telemetryData[selectedRegion.id].current);
+    if (activeTargetRegion) {
+      resetSimulatorParameters();
     }
-  }, [selectedRegion, syncSimulatorToRegionTelemetry]);
+  }, [activeTargetRegion?.id]);
 
-  if (!selectedRegion) {
+  if (!activeTargetRegion) {
     return (
       <div className="p-6 text-sm text-slate-500 bg-slate-50 min-h-screen">
-        Select a region to run the simulator.
+        Select a region on the Live Map to run the simulator.
       </div>
     );
   }
@@ -61,7 +60,7 @@ export const SimulatorPage = () => {
 
           <div className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
             <MapPin className="w-4 h-4 text-blue-600" />
-            <span>Target: <strong>{selectedRegion.name}, {selectedRegion.state}</strong></span>
+            <span>Target: <strong>{activeTargetRegion.name}, {activeTargetRegion.state}</strong> ({activeTargetRegion.lat.toFixed(1)}°N, {activeTargetRegion.lng.toFixed(1)}°E)</span>
           </div>
         </div>
       </div>

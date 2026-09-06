@@ -1,10 +1,10 @@
 // INDRA AI XAI Diagnostics — 3x3 km Spatial Resolution (EPSG:4326 / LCC)
-// Attribution Drivers: ERA5 Reanalysis + INSAT-3D/3DR (WV/TIR) + CartoDEM 30m
+// Attribution Drivers: IMDAA Reanalysis + INSAT-3D/3DR (WV/TIR) + CartoDEM 30m
 export const xaiDataSourceMeta = {
   architecture: 'Earthformer-ConvLSTM-DGMR-DualTask',
   spatialResolution: '3km_EPSG4326_LCC',
   temporalWindow: 't-6h_to_t+6h_step30m',
-  dataSources: ['ERA5 Reanalysis', 'INSAT-3D/3DR (WV/TIR)', 'CartoDEM'],
+  dataSources: ['IMDAA Reanalysis', 'INSAT-3D/3DR (WV/TIR)', 'CartoDEM'],
 };
 
 // ---- Deterministic helpers (keeps output stable across reloads) ----

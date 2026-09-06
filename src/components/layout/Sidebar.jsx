@@ -14,10 +14,8 @@ import logo from "../../assets/IndraAI-Logo.png"
 const navItems = [
   { to: '/live-map', label: 'Live Map', icon: Map },
   { to: '/risk-analysis', label: 'Risk Analysis', icon: BarChart3 },
-  { to: '/alert-ticker', label: 'Alert Ticker', icon: Bell },
   { to: '/xai-reports', label: 'XAI Reports', icon: Brain },
   { to: '/simulator', label: 'Simulator', icon: SlidersHorizontal },
-  { to: '/historical', label: 'Historical Data', icon: History },
 ];
 
 export default function Sidebar() {

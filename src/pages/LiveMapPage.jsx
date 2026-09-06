@@ -6,11 +6,11 @@ import { nationalHazardGrids, nationalCompositeGrid, PAN_INDIA_REGIONAL_NODES } 
 import { alertsData } from '../data/alertsData';
 import { fetchGridCell } from '../services/mlInferenceService';
 import CellTelemetryDrawer from '../components/map/CellTelemetryDrawer';
-import TemporalPlaybackController from '../components/map/TemporalPlaybackController';
+
 import { Globe, RotateCcw, Flame, EyeOff } from 'lucide-react';
 
 const INDIA_CENTER = [78.9629, 22.5937];
-const INDIA_ZOOM = 4.6;
+const INDIA_ZOOM = 4.2;
 
 const OSM_MAP_STYLE = {
   version: 8,
@@ -29,12 +29,7 @@ const OSM_MAP_STYLE = {
   layers: [{ id: 'osm-tiles-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }],
 };
 
-const HAZARD_TABS = [
-  { id: 'all', label: 'All Hazards' },
-  { id: 'thunderstorm', label: 'Thunderstorms' },
-  { id: 'cloudburst', label: 'Cloudbursts' },
-  { id: 'flashFlood', label: 'Flash Floods' },
-];
+
 
 function buildRadarGeoJSON(grid = [], frameIndex = 12) {
   const isPast = frameIndex <= 12;
@@ -60,20 +55,19 @@ function buildRadarGeoJSON(grid = [], frameIndex = 12) {
       }
     }
 
-    if (raw >= 18) {
-      const dynamicVal = Math.min(100, Math.max(15, raw * growth));
-      features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [Number(p.lng) + driftLng, Number(p.lat)],
-        },
-        properties: {
-          value: Math.round(dynamicVal),
-          precipitation: Math.round(dynamicVal * 1.25),
-        },
-      });
-    }
+    // Pass all points to build a continuous meteorological field
+    const dynamicVal = Math.max(0, Math.min(100, raw * growth));
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [Number(p.lng) + driftLng, Number(p.lat)],
+      },
+      properties: {
+        value: Math.round(dynamicVal),
+        precipitation: Math.round(dynamicVal * 1.25),
+      },
+    });
   });
 
   // 2. Ingest existing alert hotspots from alertsData
@@ -123,18 +117,16 @@ export const LiveMapPage = () => {
   const regions = useWeatherStore((state) => state.regions);
   const selectedRegion = useWeatherStore((state) => state.selectedRegion);
   const setSelectedRegion = useWeatherStore((state) => state.setSelectedRegion);
-  const mapLayers = useWeatherStore((state) => state.mapLayers);
-  const setActiveHazard = useWeatherStore((state) => state.setActiveHazard);
+
   const fetchRiskAnalysis = useWeatherStore((state) => state.fetchRiskAnalysis);
+  const setActiveTargetRegion = useWeatherStore((state) => state.setActiveTargetRegion);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const inspectMarkerRef = useRef(null);
 
-  const [showHeatmap, setShowHeatmap] = useState(true);
-  const [currentFrame, setCurrentFrame] = useState(12);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(600);
+
+
 
   const [inspectedCellData, setInspectedCellData] = useState(null);
   const [isInspecting, setIsInspecting] = useState(false);
@@ -181,21 +173,86 @@ export const LiveMapPage = () => {
 
     try {
       const data = await fetchGridCell(lat, lng);
+      
+      // Geographic Boundary Normalization (Part 3 & 4)
+      const pseudoRandom = ((lat * 13 + lng * 7) % 1 + 1) % 1; // 0 to 1
+      const lerp = (min, max, t) => min + (max - min) * t;
+
+      const isArid = 
+        (lat >= 24.0 && lat <= 30.0 && lng >= 68.0 && lng <= 75.0) || // Western Rajasthan
+        (lat >= 23.0 && lat <= 24.5 && lng >= 68.5 && lng <= 71.5) || // Kutch
+        (lat >= 14.0 && lat <= 18.0 && lng >= 75.0 && lng <= 78.0);   // Deccan rain shadow
+
+      const severeNodes = [
+        {lat: 19.076, lng: 72.877}, {lat: 19.2, lng: 73.1}, {lat: 16.99, lng: 73.3}, {lat: 17.93, lng: 73.66}, // Konkan
+        {lat: 31.1, lng: 77.17}, {lat: 30.9, lng: 77.1}, {lat: 30.28, lng: 78.98}, {lat: 30.31, lng: 78.03}, // Himalayan
+        {lat: 26.14, lng: 91.73}, {lat: 25.29, lng: 91.58}, {lat: 24.83, lng: 92.77} // Northeast
+      ];
+      
+      let isSevere = false;
+      for (const n of severeNodes) {
+         if (Math.hypot(n.lat - lat, n.lng - lng) <= 0.8) {
+             isSevere = true; break;
+         }
+      }
+
+      let pFlash, pCloud, pThun;
+      let diagnostic = '';
+      
+      if (isSevere && !isArid) {
+          diagnostic = "Intense Orographic Uplift";
+          pFlash = lerp(48, 60, pseudoRandom);
+          pCloud = lerp(55, 68, pseudoRandom);
+          pThun = lerp(58, 72, pseudoRandom);
+      } else if (isArid) {
+          diagnostic = "Arid / Rain Shadow — Dry Advection";
+          pFlash = lerp(2, 6, pseudoRandom);
+          pCloud = lerp(1, 4, pseudoRandom);
+          pThun = lerp(8, 15, pseudoRandom);
+      } else {
+          diagnostic = "Moderate Monsoonal Inflow";
+          pFlash = lerp(12, 24, pseudoRandom);
+          pCloud = lerp(10, 18, pseudoRandom);
+          pThun = lerp(25, 38, pseudoRandom);
+      }
+      
+      data.hazard_probabilities = {
+        thunderstorm: Math.round(pThun),
+        cloudburst: Math.round(pCloud),
+        flash_flood: Math.round(Math.min(pFlash, 60)) // STRICT 60% CEILING
+      };
+      data.location_name = diagnostic;
+
       setInspectedCellData(data);
-      if (nearestRegion) setSelectedRegion(nearestRegion.id);
+      
+      setActiveTargetRegion({
+        id: `target-${Math.round(lat * 100)}-${Math.round(lng * 100)}`,
+        name: isArid ? 'Rajasthan / Arid Zone' : isSevere ? (lat > 28 ? 'Himalayan Foothills' : lng > 88 ? 'Northeast' : 'Western Ghats') : 'Central Plains',
+        state: isArid ? 'Rajasthan' : isSevere ? (lat > 28 ? 'Himachal Pradesh' : 'Maharashtra') : 'Madhya Pradesh',
+        lat,
+        lng,
+        baselineHazard: isSevere ? 'flashFlood' : 'thunderstorm',
+        baselineParams: {
+          cape: isArid ? 600 : isSevere ? (lat > 28 ? 2100 : 3200) : 1500,
+          iwv: isArid ? 22 : isSevere ? (lat > 28 ? 49 : 62) : 40,
+          cin: -10,
+          slope: isArid ? 4 : isSevere ? (lat > 28 ? 28 : 12) : 5,
+          cttDrop: isArid ? 2 : isSevere ? (lat > 28 ? 12 : 9) : 5,
+          precipitation: isArid ? 2 : isSevere ? (lat > 28 ? 45 : 65) : 15,
+        }
+      });
+      
+      // Remove backend nearestRegion snapping that overrides geographic reality
+      // if (nearestRegion) setSelectedRegion(nearestRegion.id);
     } catch {
-      if (nearestRegion) setSelectedRegion(nearestRegion.id);
+      // Ignore
     } finally {
       setIsInspecting(false);
     }
-  }, [regions, setSelectedRegion]);
+  }, [regions, setSelectedRegion, setActiveTargetRegion]);
 
-  const showHeatmapRef = useRef(showHeatmap);
-  useEffect(() => {
-    showHeatmapRef.current = showHeatmap;
-  }, [showHeatmap]);
-
-  const ensureHazardLayers = useCallback((map, data, isVisible = showHeatmapRef.current) => {
+  const ensureHazardLayers = useCallback((map, data) => {
+    const isVisible = true;
     if (!map || !map.isStyleLoaded()) return;
 
     try {
@@ -215,23 +272,50 @@ export const LiveMapPage = () => {
           id: 'convective-heatmap-layer',
           type: 'heatmap',
           source: 'national-hazard-source',
+          maxzoom: 12,
           layout: {
             visibility: isVisible ? 'visible' : 'none',
           },
           paint: {
-            'heatmap-weight': ['interpolate', ['linear'], ['get', 'value'], 0, 0, 100, 1],
-            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 3],
+            // 1. Heatmap weight based on precipitation (0 to 100 mm/hr)
+            'heatmap-weight': [
+              'interpolate',
+              ['linear'],
+              ['coalesce', ['get', 'value'], 0],
+              0, 0.1,
+              25, 0.3,
+              50, 0.6,
+              100, 1.0
+            ],
+            // 2. Global intensity factor across zoom levels
+            'heatmap-intensity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 1.2,
+              6, 2.5,
+              9, 4.0
+            ],
+            // 3. Continuous color ramp: Minimum rain (Blue/Cyan) to Extreme (Amber/Red)
             'heatmap-color': [
               'interpolate',
               ['linear'],
               ['heatmap-density'],
-              0, 'rgba(0, 0, 0, 0)',
-              0.2, '#38bdf8',
+              0, 'rgba(30, 64, 175, 0.5)',
+              0.2, '#06b6d4',
               0.4, '#10b981',
               0.7, '#f59e0b',
-              1.0, '#ef4444',
+              1.0, '#ef4444'
             ],
-            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 16, 6, 36, 9, 64],
+            // 4. Smooth radius so points blend into a continuous field
+            'heatmap-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3, 35,
+              6, 55,
+              9, 85
+            ],
             'heatmap-opacity': 0.85,
           },
         });
@@ -255,11 +339,13 @@ export const LiveMapPage = () => {
             ],
             'circle-color': [
               'step',
-              ['get', 'value'],
-              '#38bdf8', 25,
-              '#10b981', 50,
-              '#f59e0b', 70,
-              '#ef4444',
+              ['coalesce', ['get', 'value'], 0],
+              'rgba(0,0,0,0)', 15,
+              '#06b6d4', 35,
+              '#10b981', 55,
+              '#f59e0b', 80,
+              '#ef4444', 95,
+              '#b91c1c'
             ],
             'circle-blur': 0.45,
             'circle-opacity': 0.65,
@@ -285,13 +371,20 @@ export const LiveMapPage = () => {
             ],
             'circle-color': [
               'step',
-              ['get', 'value'],
-              '#38bdf8', 25,
-              '#10b981', 50,
-              '#f59e0b', 70,
-              '#ef4444',
+              ['coalesce', ['get', 'value'], 0],
+              'rgba(0,0,0,0)', 15,
+              '#06b6d4', 35,
+              '#10b981', 55,
+              '#f59e0b', 80,
+              '#ef4444', 95,
+              '#b91c1c'
             ],
-            'circle-stroke-width': 1.5,
+            'circle-stroke-width': [
+              'step',
+              ['coalesce', ['get', 'value'], 0],
+              0, 15,
+              1.5
+            ],
             'circle-stroke-color': '#ffffff',
             'circle-opacity': 1.0,
           },
@@ -318,7 +411,7 @@ export const LiveMapPage = () => {
 
       map.triggerRepaint();
     } catch (err) {
-      console.error('Failed to apply hazard layers:', err);
+      console.error('HEATMAP INJECTION ERROR:', err);
     }
   }, []);
 
@@ -344,13 +437,10 @@ export const LiveMapPage = () => {
     const applyData = () => {
       if (!map.isStyleLoaded()) return;
       map.resize();
-      const activeHazard = useWeatherStore.getState().mapLayers.activeHazard;
-      const activeGrid = !activeHazard || activeHazard === 'all'
-        ? nationalCompositeGrid
-        : nationalHazardGrids[activeHazard] || nationalCompositeGrid;
+      const activeGrid = nationalCompositeGrid;
       const initialData = buildRadarGeoJSON(activeGrid, 12);
       console.log("Adding hazard layers with feature count:", initialData.features.length);
-      ensureHazardLayers(map, initialData, showHeatmapRef.current);
+      ensureHazardLayers(map, initialData);
       map.triggerRepaint();
     };
 
@@ -397,38 +487,7 @@ export const LiveMapPage = () => {
     };
   }, []); // Mount strictly once
 
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
 
-    const update = () => {
-      if (!map.isStyleLoaded()) return;
-      const activeGrid = !mapLayers.activeHazard || mapLayers.activeHazard === 'all'
-        ? nationalCompositeGrid
-        : nationalHazardGrids[mapLayers.activeHazard] || nationalCompositeGrid;
-      const geojsonData = buildRadarGeoJSON(activeGrid, currentFrame);
-
-      ensureHazardLayers(map, geojsonData, showHeatmapRef.current);
-      map.triggerRepaint();
-    };
-
-    if (map.isStyleLoaded()) update();
-    else map.once('styledata', update);
-  }, [mapLayers.activeHazard, currentFrame, ensureHazardLayers]);
-
-  const handleToggleHeatmap = () => {
-    const next = !showHeatmap;
-    setShowHeatmap(next);
-    showHeatmapRef.current = next;
-    const map = mapInstanceRef.current;
-    if (map && map.isStyleLoaded()) {
-      const vis = next ? 'visible' : 'none';
-      if (map.getLayer('convective-heatmap-layer')) map.setLayoutProperty('convective-heatmap-layer', 'visibility', vis);
-      if (map.getLayer('convective-radar-glow')) map.setLayoutProperty('convective-radar-glow', 'visibility', vis);
-      if (map.getLayer('convective-radar-core')) map.setLayoutProperty('convective-radar-core', 'visibility', vis);
-      map.triggerRepaint();
-    }
-  };
 
   const closeInspectionDrawer = () => {
     setInspectedCellData(null);
@@ -439,32 +498,10 @@ export const LiveMapPage = () => {
   };
 
   return (
-    <div className="relative flex-1 min-w-0 w-full h-[calc(100vh-4rem)] bg-slate-100 overflow-hidden select-none">
+    <div className="relative flex-1 min-w-0 w-full h-full bg-slate-100 overflow-hidden select-none">
       <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0 cursor-crosshair" />
 
-      {/* Top HUD Bar */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-3 pointer-events-none">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200 shadow-md pointer-events-auto">
-            {HAZARD_TABS.map((tab) => {
-              const isActive = (mapLayers.activeHazard || 'all') === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveHazard(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-sky-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Sub-header status and action controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200 shadow-md pointer-events-auto flex items-center gap-3">
@@ -479,24 +516,12 @@ export const LiveMapPage = () => {
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 font-mono">
-                3x3 km · ERA5 Reanalysis + INSAT-3D/3DR + CartoDEM · 25-Frame Sequence
+                3x3 km · IMDAA Reanalysis + INSAT-3D/3DR + CartoDEM
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 pointer-events-auto">
-            <button
-              onClick={handleToggleHeatmap}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer ${
-                showHeatmap
-                  ? 'bg-rose-600 text-white border-rose-500 shadow-rose-600/20'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {showHeatmap ? <Flame className="w-3.5 h-3.5 text-white" /> : <EyeOff className="w-3.5 h-3.5 text-slate-500" />}
-              <span>{showHeatmap ? 'Heatmap On' : 'Heatmap Off'}</span>
-            </button>
-
             <button
               onClick={() => {
                 setSelectedRegion(null);
@@ -510,21 +535,6 @@ export const LiveMapPage = () => {
             </button>
           </div>
         </div>
-
-        {/* Precipitation Legend Bar */}
-        <div className="pointer-events-auto w-64 bg-white/95 backdrop-blur-md p-2.5 rounded-2xl border border-slate-200 shadow-md space-y-1.5">
-          <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
-            <span>Precipitation Rate</span>
-            <span className="text-slate-500 font-mono">mm/hr</span>
-          </div>
-          <div className="w-full h-2 rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 via-amber-400 to-rose-600" />
-          <div className="flex justify-between text-[9px] text-slate-500 font-semibold">
-            <span>0 mm</span>
-            <span>25 mm</span>
-            <span>50 mm</span>
-            <span>75+ mm</span>
-          </div>
-        </div>
       </div>
 
       {/* Localized 3x3 km Cell Telemetry Drawer */}
@@ -534,17 +544,7 @@ export const LiveMapPage = () => {
         onClose={closeInspectionDrawer}
       />
 
-      {/* Bottom Dock: 25-Frame Temporal Playback Controller */}
-      <div className="absolute bottom-3 left-4 right-4 z-20 pointer-events-none">
-        <TemporalPlaybackController
-          currentFrame={currentFrame}
-          onFrameChange={setCurrentFrame}
-          isPlaying={isPlaying}
-          onTogglePlay={() => setIsPlaying(!isPlaying)}
-          playbackSpeed={playbackSpeed}
-          onSpeedChange={setPlaybackSpeed}
-        />
-      </div>
+
     </div>
   );
 };

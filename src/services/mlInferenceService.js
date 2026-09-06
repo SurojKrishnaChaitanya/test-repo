@@ -115,7 +115,7 @@ export const predictSevereWeather = async (payload = {}) => {
       },
       featureImportance,
       attentionGrid,
-      xaiExplanation: `${regionName}'s 3x3 km nowcast projects peak ${baseHazard} intensity between +2h and +3h, driven primarily by ERA5 moisture convergence (IWV ${iwv} kg/m²), high instability (CAPE ${cape} J/kg), and rapid INSAT-3DR CTT cooling (-${cttDrop}°C/30min), with CartoDEM slope drainage amplifying flood translation.`,
+      xaiExplanation: `${regionName}'s 3x3 km nowcast projects peak ${baseHazard} intensity between +2h and +3h, driven primarily by IMDAA moisture convergence (IWV ${iwv} kg/m²), high instability (CAPE ${cape} J/kg), and rapid INSAT-3DR CTT cooling (-${cttDrop}°C/30min), with CartoDEM slope drainage amplifying flood translation.`,
       advisory
     };
   }
@@ -137,12 +137,45 @@ export const predictSevereWeather = async (payload = {}) => {
     throw new Error(`Inference HTTP Error ${response.status}: ${response.statusText}`);
   }
 
-  return await response.json();
+  const raw = await response.json();
+  const tel = raw.telemetry_observed || {};
+
+  const metrics = raw.metrics || {
+    precipitationRate: tel.precipitation_rate || (payload.telemetry?.precipitation ? `${payload.telemetry.precipitation} mm/h` : '65 mm/h'),
+    precipitationDaily: tel.precipitation_daily || '156 mm/day (IMD scale)',
+    windSpeed: tel.wind_speed || (payload.telemetry?.windSpeed ? `${payload.telemetry.windSpeed} km/h` : '40 km/h'),
+    iwvMoisture: tel.integrated_water_vapor || (payload.telemetry?.iwv ? `${payload.telemetry.iwv} kg/m²` : '45 kg/m²'),
+    cape: tel.cape || (payload.telemetry?.cape ? `${payload.telemetry.cape} J/kg` : '1800 J/kg'),
+    cin: tel.cin || (payload.telemetry?.cin ? `${payload.telemetry.cin} J/kg` : '-15 J/kg'),
+    cttDropRate: tel.ctt_drop_rate || (payload.telemetry?.cttDrop ? `-${payload.telemetry.cttDrop}°C/30min` : '-8°C/30min'),
+  };
+
+  return {
+    ...raw,
+    regionId: raw.regionId || raw.region_id,
+    regionName: raw.regionName || raw.region_name,
+    state: raw.state,
+    coordinates: raw.coordinates,
+    riskScore: raw.riskScore ?? raw.risk_score ?? 75,
+    hazardType: raw.hazardType || raw.hazard_type || 'thunderstorm',
+    confidence: raw.confidence ?? raw.model_confidence ?? 0.88,
+    model_confidence: raw.model_confidence ?? raw.confidence ?? 0.88,
+    hourlyTrend: raw.hourlyTrend || raw.hourly_trend || [],
+    hourly_trend: raw.hourly_trend || raw.hourlyTrend || [],
+    featureImportance: raw.featureImportance || raw.feature_importance || [],
+    feature_importance: raw.feature_importance || raw.featureImportance || [],
+    attentionGrid: raw.attentionGrid || raw.attention_grid || [],
+    attention_grid: raw.attention_grid || raw.attentionGrid || [],
+    metrics,
+    telemetry_observed: tel,
+    xaiExplanation: raw.xaiExplanation || raw.xai_explanation || '',
+    advisory: raw.advisory,
+  };
 };
 
 /**
  * Queries localized 3x3 km cell telemetry from the atmospheric engine.
- * Retrieves ERA5 anomalies, CAPE/CIN, INSAT CTT cooling, kinematic flux,
+ * Retrieves IMDAA anomalies, CAPE/CIN, INSAT CTT cooling, kinematic flux,
  * and CartoDEM hydro-geomorphic drainage indices.
  */
 export const fetchGridCell = async (lat, lng) => {

@@ -5,46 +5,46 @@ import { PAN_INDIA_REGIONAL_NODES } from '../../data/nationalGridData';
 // Captures the Northern Himalayan crown, Western desert & Kutch/Saurashtra peninsulas,
 // Southern tip (Kanyakumari), Coromandel & Eastern delta, and the complete Northeast wing.
 const INDIA_LANDMASS_COORDS = [
-  // Northern Crown (Jammu, Kashmir, Ladakh, Siachen)
-  [37.0, 74.5], [36.2, 75.8], [35.5, 77.2], [35.2, 78.5], [34.5, 79.4],
-  [33.2, 79.2], [32.5, 78.7], [31.5, 78.5], [31.0, 79.2], [30.4, 80.8],
+  // Western Border (Gujarat / Rajasthan / Punjab / J&K)
+  [23.7, 68.1], [24.3, 68.8], [24.0, 69.5], [24.4, 70.8], [25.0, 70.8], [26.0, 70.3], [27.0, 70.8], 
+  [28.1, 70.4], [28.6, 72.0], [29.8, 73.0], [30.2, 73.9], [31.0, 74.5], [32.0, 74.9], [32.5, 74.3], 
+  [33.1, 74.0], [34.0, 74.1], [34.5, 73.8],
   
-  // Nepal & Sikkim Border
-  [28.8, 80.3], [28.2, 81.5], [27.4, 83.2], [26.8, 85.0], [26.5, 87.5],
-  [27.3, 88.2], [27.8, 88.7], [27.3, 89.0],
+  // Northern Crown (Kashmir & Ladakh up to 37.1)
+  [35.0, 74.4], [35.5, 74.9], [36.0, 75.3], [36.6, 74.5], [37.1, 74.6], [36.6, 75.5], [35.8, 76.5],
+  [35.4, 77.3], [35.6, 78.0], [35.4, 78.3], [35.6, 79.0], [35.3, 80.0], [34.7, 79.5], [34.0, 79.0],
+  [33.6, 78.8], [33.0, 79.2], [32.4, 78.5], [31.8, 78.8], [31.4, 79.0], [31.0, 79.1], [30.4, 80.8],
+  [29.8, 80.5], [29.0, 80.1], 
   
-  // Bhutan & Arunachal Pradesh (Northeast Crest)
-  [26.9, 91.5], [27.5, 92.5], [28.0, 93.8], [28.8, 94.8], [29.3, 96.2],
-  [28.3, 97.2], [27.6, 97.4],
+  // Nepal Border
+  [28.5, 80.5], [28.0, 81.5], [27.5, 83.0], [27.0, 84.5], [26.5, 86.0], [26.4, 87.5], [26.8, 88.0],
+  [27.2, 88.1],
   
-  // Eastern Border (Nagaland, Manipur, Mizoram)
-  [26.5, 95.5], [25.5, 94.8], [24.5, 94.0], [23.5, 93.3], [22.2, 93.1],
-  [21.8, 92.8], [22.8, 92.2], [24.2, 92.1], [24.8, 91.2],
+  // Sikkim & Bhutan Border
+  [28.0, 88.6], [27.4, 89.0], [26.8, 89.1], [26.7, 89.8], [26.8, 91.5], [27.3, 91.9], [27.8, 92.0],
   
-  // Meghalaya & Gangetic Delta (Sundarbans)
-  [25.3, 89.9], [25.8, 89.8], [25.0, 88.5], [24.0, 88.6], [22.8, 88.9],
-  [21.7, 88.3], [21.5, 87.2],
+  // Arunachal Pradesh & Northeast Wing (up to 97.4)
+  [27.9, 92.6], [28.6, 93.4], [29.2, 94.2], [29.4, 95.5], [29.0, 96.5], [28.2, 97.4], [27.6, 97.0],
   
-  // Eastern Coastline (Bay of Bengal)
-  [20.7, 86.9], [19.8, 85.8], [19.2, 84.8], [18.2, 83.9], [17.5, 83.2],
-  [16.8, 82.3], [15.8, 80.5], [14.8, 80.1], [13.4, 80.3], [12.0, 79.8],
-  [10.8, 79.8], [9.8, 79.2], [9.2, 78.8], [8.5, 78.0],
+  // Eastern Border (Myanmar & Bangladesh)
+  [27.0, 96.0], [26.5, 95.0], [25.5, 94.6], [24.5, 94.2], [23.5, 93.5], [22.2, 93.1], [21.9, 92.6],
+  [22.8, 92.1], [23.8, 91.5], [24.5, 92.0], [25.0, 92.2], [25.3, 91.0], [25.2, 89.9], [25.8, 89.6],
+  [26.2, 89.9], [26.4, 89.0], [25.0, 88.5], [24.0, 88.7], [23.0, 88.9], [22.0, 89.0], [21.6, 88.2],
   
-  // Southern Tip (Kanyakumari / Cape Comorin)
+  // Eastern Coast (Sundarbans to Coromandel)
+  [21.6, 87.2], [21.0, 86.8], [20.0, 86.0], [19.3, 85.0], [18.5, 84.1], [17.8, 83.5], [17.0, 82.3],
+  [16.2, 81.3], [15.5, 80.2], [14.0, 80.2], [13.0, 80.3], [12.0, 79.9], [10.8, 79.8], [9.8, 79.2],
+  [9.0, 78.5], [8.1, 77.5], 
+  
+  // Kanyakumari
   [8.08, 77.55],
   
-  // Western Coastline (Arabian Sea / Western Ghats / Konkan)
-  [8.8, 76.6], [9.9, 76.2], [11.2, 75.8], [12.5, 75.0], [13.8, 74.4],
-  [15.2, 73.9], [16.5, 73.4], [17.8, 73.2], [19.0, 72.8], [20.2, 72.8],
+  // Western Coast (Konkan to Saurashtra & Kutch)
+  [8.5, 76.8], [9.5, 76.3], [10.5, 75.9], [11.5, 75.5], [12.5, 75.0], [13.5, 74.6], [14.5, 74.3],
+  [15.5, 73.7], [16.5, 73.3], [17.5, 73.1], [18.5, 72.9], [19.5, 72.7], [20.0, 72.8], [20.7, 72.9],
   
-  // Gujarat Coast (Gulf of Khambhat, Saurashtra Peninsula, Gulf of Kutch)
-  [21.1, 72.7], [20.7, 71.0], [20.9, 70.0], [21.7, 69.3], [22.3, 69.0],
-  [22.8, 70.1], [23.1, 68.6], [23.8, 68.4],
-  
-  // Western Desert & International Border (Rajasthan & Punjab)
-  [24.3, 70.8], [25.2, 70.4], [26.5, 70.0], [27.8, 70.5], [28.8, 71.8],
-  [30.2, 73.0], [31.5, 74.6], [32.5, 74.8], [33.5, 74.2], [34.5, 74.2],
-  [35.8, 74.4], [37.0, 74.5]
+  // Gujarat / Gulf of Khambhat & Saurashtra
+  [21.2, 72.5], [20.8, 71.5], [20.8, 70.5], [21.5, 69.5], [22.3, 69.0], [22.8, 70.2], [23.0, 68.5]
 ];
 
 // Key internal state and geological divide boundaries
@@ -182,7 +182,7 @@ export default function PanIndiaHeatmapCanvas({ mode = 'thermodynamic', selected
       activeNodes.push({
         lat: selectedRegion.lat,
         lng: selectedRegion.lng,
-        val: selectedRegion.riskScore || 92,
+        val: selectedRegion.baselineParams?.cape < 1000 ? 12 : (selectedRegion.baselineHazard === 'flashFlood' ? 95 : 55),
         name: selectedRegion.name,
       });
     }
@@ -333,11 +333,7 @@ export default function PanIndiaHeatmapCanvas({ mode = 'thermodynamic', selected
       ctx.drawImage(offCanvas, pad.left, pad.top, pW, pH);
       ctx.restore();
 
-      // Draw subtle maritime boundary plume bleed into the Arabian Sea & Bay of Bengal
-      ctx.save();
-      ctx.globalAlpha = 0.35;
-      ctx.drawImage(offCanvas, pad.left, pad.top, pW, pH);
-      ctx.restore();
+
 
       ctx.restore();
     }

@@ -18,31 +18,23 @@ import {
 } from 'lucide-react';
 
 export const XAIReportsPage = () => {
-  const selectedRegion = useWeatherStore((state) => state.selectedRegion);
+  const activeTargetRegion = useWeatherStore((state) => state.activeTargetRegion);
   const currentRiskData = useWeatherStore((state) => state.currentRiskData);
   const fetchRiskAnalysis = useWeatherStore((state) => state.fetchRiskAnalysis);
 
   useEffect(() => {
-    if (selectedRegion) fetchRiskAnalysis();
-  }, [selectedRegion?.id, fetchRiskAnalysis]);
-
-  if (!selectedRegion) {
-    return (
-      <div className="p-6 text-sm text-slate-400">
-        Select a region to view Explainable AI (XAI) diagnostics.
-      </div>
-    );
-  }
+    if (activeTargetRegion) fetchRiskAnalysis();
+  }, [activeTargetRegion?.id, fetchRiskAnalysis]);
 
   // Live telemetry resolution for selected region
-  const regionTelemetry = (selectedRegion && telemetryData[selectedRegion.id]?.current) || {};
+  const regionTelemetry = (activeTargetRegion && telemetryData[activeTargetRegion.id]?.current) || {};
 
-  const iwvVal = regionTelemetry.iwv ?? (currentRiskData?.metrics?.iwvMoisture ? parseFloat(currentRiskData.metrics.iwvMoisture) : 52);
-  const capeVal = regionTelemetry.cape ?? (currentRiskData?.metrics?.cape ? parseFloat(currentRiskData.metrics.cape) : 2400);
-  const cinVal = regionTelemetry.cin ?? (currentRiskData?.metrics?.cin ? parseFloat(currentRiskData.metrics.cin) : -12);
-  const cttDropVal = regionTelemetry.cttDrop30m ?? (currentRiskData?.metrics?.cttDropRate ? Math.abs(parseFloat(currentRiskData.metrics.cttDropRate)) : 8);
-  const precipVal = regionTelemetry.rainfallRate ?? (currentRiskData?.metrics?.precipitationRate ? parseFloat(currentRiskData.metrics.precipitationRate) : 65);
-  const slopeVal = (selectedRegion?.id?.includes('HP') || selectedRegion?.id?.includes('UK') || selectedRegion?.id?.includes('WB')) ? 28 : (selectedRegion?.id?.includes('MUM') || selectedRegion?.id?.includes('CHE')) ? 8 : 16;
+  const iwvVal = regionTelemetry.iwv ?? (currentRiskData?.metrics?.iwvMoisture ? parseFloat(currentRiskData.metrics.iwvMoisture) : activeTargetRegion?.baselineParams?.iwv ?? 52);
+  const capeVal = regionTelemetry.cape ?? (currentRiskData?.metrics?.cape ? parseFloat(currentRiskData.metrics.cape) : activeTargetRegion?.baselineParams?.cape ?? 2400);
+  const cinVal = regionTelemetry.cin ?? (currentRiskData?.metrics?.cin ? parseFloat(currentRiskData.metrics.cin) : activeTargetRegion?.baselineParams?.cin ?? -12);
+  const cttDropVal = regionTelemetry.cttDrop30m ?? (currentRiskData?.metrics?.cttDropRate ? Math.abs(parseFloat(currentRiskData.metrics.cttDropRate)) : activeTargetRegion?.baselineParams?.cttDrop ?? 8);
+  const precipVal = regionTelemetry.rainfallRate ?? (currentRiskData?.metrics?.precipitationRate ? parseFloat(currentRiskData.metrics.precipitationRate) : activeTargetRegion?.baselineParams?.precipitation ?? 65);
+  const slopeVal = activeTargetRegion?.baselineParams?.slope ?? 16;
 
   // Dynamically compute physics-grounded feature attributions summing to 100%
   const xaiResult = useMemo(() => {
@@ -55,6 +47,14 @@ export const XAIReportsPage = () => {
       precipitation: precipVal,
     });
   }, [iwvVal, capeVal, cinVal, slopeVal, cttDropVal, precipVal]);
+
+  if (!activeTargetRegion) {
+    return (
+      <div className="p-6 text-sm text-slate-400">
+        Select a region to view Explainable AI (XAI) diagnostics.
+      </div>
+    );
+  }
 
   const attrIwv = xaiResult.attributions.find((a) => a.id === 'iwv') || { percentage: 34 };
   const attrBuoyancy = xaiResult.attributions.find((a) => a.id === 'buoyancy') || { percentage: 28 };
@@ -79,11 +79,11 @@ export const XAIReportsPage = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
             <MapPin className="w-4 h-4 text-purple-600" />
-            <span>Target: <strong>{selectedRegion.name}, {selectedRegion.state}</strong></span>
+            <span>Target: <strong>{activeTargetRegion?.name || 'National Overview'}, {activeTargetRegion?.state || 'India'}</strong></span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700">
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Risk Score: {currentRiskData?.riskScore ?? selectedRegion.riskScore ?? 84}/100</span>
+            <span>Risk Score: {currentRiskData?.riskScore ?? activeTargetRegion?.riskScore ?? 84}/100</span>
           </div>
         </div>
       </div>
@@ -208,7 +208,7 @@ export const XAIReportsPage = () => {
             <p className="text-[11px] text-slate-500 leading-snug">
               National atmospheric instability synthesis combining IMDAA reanalysis Integrated Water Vapor (IWV) anomalies and Convective Available Potential Energy (CAPE) across the Indian subcontinent.
             </p>
-            <PanIndiaHeatmapCanvas mode="thermodynamic" selectedRegion={selectedRegion} />
+            <PanIndiaHeatmapCanvas mode="thermodynamic" selectedRegion={activeTargetRegion} />
           </div>
 
           {/* Right Panel: INSAT-3D/3DR + CartoDEM Multi-Sensor Fusion */}
@@ -227,7 +227,7 @@ export const XAIReportsPage = () => {
             <p className="text-[11px] text-slate-500 leading-snug">
               Satellite infrared cloud-top temperature cooling rate (10.8 µm TIR) fused with CartoDEM 30m geomorphic hydrograph slope convergence indices over mountain catchments.
             </p>
-            <PanIndiaHeatmapCanvas mode="multiSensor" selectedRegion={selectedRegion} />
+            <PanIndiaHeatmapCanvas mode="multiSensor" selectedRegion={activeTargetRegion} />
           </div>
         </div>
 
@@ -242,7 +242,7 @@ export const XAIReportsPage = () => {
               <strong className="text-purple-900">Dominant Convective Driver ({xaiResult.dominantDriver?.name}):</strong> {xaiResult.narrative}
             </p>
             <p className="text-slate-600">
-              <strong className="text-slate-800">Pan-India Diagnostic Synthesis:</strong> Subcontinental reanalysis and geostationary observations locate peak convective intensification over the <strong>{selectedRegion.name} ({selectedRegion.state})</strong> centroid [{selectedRegion.lat.toFixed(2)}°N, {selectedRegion.lng.toFixed(2)}°E]. Deep tropospheric moisture saturation ({iwvVal} kg/m² IMDAA), coupled with strong thermodynamic buoyancy ({capeVal} J/kg CAPE) and rapid INSAT-3DR thermal cooling (-{cttDropVal}°C/30min), accelerates hydro-geomorphic concentration through CartoDEM drainage contours.
+              <strong className="text-slate-800">Pan-India Diagnostic Synthesis:</strong> Subcontinental reanalysis and geostationary observations locate peak convective intensification over the <strong>{activeTargetRegion?.name} ({activeTargetRegion?.state})</strong> centroid [{activeTargetRegion?.lat?.toFixed(2)}°N, {activeTargetRegion?.lng?.toFixed(2)}°E]. Deep tropospheric moisture saturation ({iwvVal} kg/m² IMDAA), coupled with strong thermodynamic buoyancy ({capeVal} J/kg CAPE) and rapid INSAT-3DR thermal cooling (-{cttDropVal}°C/30min), accelerates hydro-geomorphic concentration through CartoDEM drainage contours.
             </p>
           </div>
         </div>

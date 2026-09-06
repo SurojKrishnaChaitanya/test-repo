@@ -39,6 +39,17 @@ export const useWeatherStore = create((set, get) => ({
   setSelectedRegion: (regionIdOrObj) =>
     set({ selectedRegion: formatRegionObject(regionIdOrObj) }),
 
+  activeTargetRegion: {
+    id: 'default-target',
+    name: 'National Centroid',
+    state: 'Madhya Pradesh',
+    lat: 22.5937,
+    lng: 78.9629,
+    baselineHazard: 'thunderstorm',
+    baselineParams: { cape: 1200, iwv: 35, cin: -25, slope: 15, cttDrop: 4, precipitation: 25 },
+  },
+  setActiveTargetRegion: (target) => set({ activeTargetRegion: target }),
+
   // ---- Live Map forecast lead-time scrubber (+2h to +6h, per problem statement) ----
   forecastHorizon: { min: 1, max: 6, value: 1 },
 
@@ -107,26 +118,14 @@ export const useWeatherStore = create((set, get) => ({
   // Resets the simulator parameters back to the baseline equilibrium state
   // and immediately re-evaluates the risk and XAI feature attributions.
   resetSimulatorParameters: () => {
-    const region = get().selectedRegion;
-    const tel = (region && telemetryData[region.id]?.baseline) || {
-      iwv: 35,
-      cape: 1200,
-      cin: -25,
-      windGust: 25,
-      rainfallRate: 25,
-      cttDrop30m: 4,
-      slope: 15,
-    };
-
-    const resetParams = {
-      precipitation: tel.rainfallRate ?? 25,
-      windSpeed: tel.windGust ?? 25,
-      iwv: tel.iwv ?? 35,
-      cape: tel.cape ?? 1200,
-      cin: tel.cin ?? -25,
-      cttDrop: tel.cttDrop30m ?? 4,
-      slope: tel.slope ?? 15,
-    };
+    const active = get().activeTargetRegion;
+    
+    // Default fallback values if no region is active
+    let resetParams = { precipitation: 25, windSpeed: 25, iwv: 35, cape: 1200, cin: -25, cttDrop: 4, slope: 15 };
+    
+    if (active && active.baselineParams) {
+      resetParams = { ...active.baselineParams };
+    }
 
     set({ simulatorParameters: resetParams });
     get().fetchRiskAnalysis(resetParams);
@@ -134,8 +133,9 @@ export const useWeatherStore = create((set, get) => ({
 
   // ---- Core inference call — connects to backend /api/v1/indra-ai/predict ----
   fetchRiskAnalysis: async (telemetryOverride) => {
-    const region = get().selectedRegion;
-    if (!region) return;
+    const active = get().activeTargetRegion;
+    // Fallback if no target is set
+    const region = active || { id: 'default', name: 'National Overview', lat: 22.5937, lng: 78.9629 };
 
     const telemetry = telemetryOverride || get().simulatorParameters;
 

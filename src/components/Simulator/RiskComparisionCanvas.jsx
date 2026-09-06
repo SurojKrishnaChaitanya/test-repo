@@ -28,9 +28,10 @@ import { useWeatherStore } from '../../store/useWeatherStore';
 
 export const RiskComparisionCanvas = ({ riskData, isLoading }) => {
   const simulatorParameters = useWeatherStore((state) => state.simulatorParameters);
-  const riskScore = riskData?.riskScore ?? 0;
-  const hazardType = riskData?.hazardType || 'Low Risk';
-  const confidence = riskData?.confidence ? (riskData.confidence * 100).toFixed(0) : '--';
+  const riskScore = riskData?.riskScore ?? riskData?.risk_score ?? 0;
+  const hazardType = riskData?.hazardType || riskData?.hazard_type || 'Low Risk';
+  const rawConf = riskData?.confidence ?? riskData?.model_confidence;
+  const confidence = rawConf ? (rawConf * 100).toFixed(0) : '--';
 
   // Dynamic XAI Feature Attribution & Narrative coupling
   const xaiResult = useMemo(() => {
